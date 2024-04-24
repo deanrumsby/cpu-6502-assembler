@@ -1,69 +1,45 @@
-use std::env;
+use clap::Parser;
+use std::io::{stdin, stdout, Write};
+
+#[derive(Parser)]
+struct Cli {
+    #[arg(short, long)]
+    repl: bool,
+
+    #[arg(short, long)]
+    tokens: bool,
+}
 
 fn main() {
-    let args: Vec<String> = env::args().collect();
-    dbg!(args);
+    let cli = Cli::parse();
+
+    if cli.repl {
+        repl();
+    }
 }
 
-enum Op {
-    ADC,
-    AND,
-    ASL,
-    BCC,
-    BCS,
-    BEQ,
-    BIT,
-    BMI,
-    BNE,
-    BPL,
-    BRK,
-    BVC,
-    BVS,
-    CLC,
-    CLD,
-    CLI,
-    CLV,
-    CMP,
-    CPX,
-    CPY,
-    DEC,
-    DEX,
-    DEY,
-    EOR,
-    INC,
-    INX,
-    INY,
-    JMP,
-    JSR,
-    LDA,
-    LDX,
-    LDY,
-    LSR,
-    NOP,
-    ORA,
-    PHA,
-    PHP,
-    PLA,
-    PLP,
-    ROL,
-    ROR,
-    RTI,
-    RTS,
-    SBC,
-    SEC,
-    SED,
-    SEI,
-    STA,
-    STX,
-    STY,
-    TAX,
-    TAY,
-    TSX,
-    TXA,
-    TXS,
-    TYA,
+fn repl() {
+    loop {
+        print!("> ");
+        stdout().flush().unwrap();
+
+        let mut input = String::new();
+        match stdin().read_line(&mut input) {
+            Ok(_) => {}
+            Err(e) => println!("Error: {e}"),
+        }
+
+        run(input);
+    }
 }
 
+fn run(source: String) {
+    let mut scanner = Scanner::new(source);
+    let tokens = scanner.scan();
+    println!("{tokens:?}");
+}
+
+#[derive(Clone, Debug)]
 enum Token {
     Op,
 }
@@ -85,5 +61,9 @@ impl Scanner {
             line: 1,
             tokens: Vec::new(),
         }
+    }
+
+    pub fn scan(&mut self) -> Vec<Token> {
+        self.tokens.clone()
     }
 }
