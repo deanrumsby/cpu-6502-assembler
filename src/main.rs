@@ -1,5 +1,9 @@
 use clap::Parser;
-use std::io::{stdin, stdout, Write};
+use std::{
+    io::{stdin, stdout, Write},
+    iter::Peekable,
+    str::Chars,
+};
 
 #[derive(Parser)]
 struct Cli {
@@ -41,14 +45,12 @@ fn run(source: String) {
 
 #[derive(Clone, Debug)]
 enum Token {
-    Op,
+    Number(u32),
 }
 
 struct Scanner {
     source: String,
-    start: u32,
-    current: u32,
-    line: u32,
+    line: usize,
     tokens: Vec<Token>,
 }
 
@@ -56,14 +58,47 @@ impl Scanner {
     pub fn new(source: String) -> Self {
         Self {
             source,
-            start: 0,
-            current: 0,
             line: 1,
             tokens: Vec::new(),
         }
     }
 
     pub fn scan(&mut self) -> Vec<Token> {
+        let mut chars = self.source.chars().peekable();
+        while let Some(_) = chars.peek() {
+            if let Some(t) = self.next_token(&mut chars) {
+                self.tokens.push(t);
+            } else {
+                chars.next();
+            }
+        }
         self.tokens.clone()
+    }
+
+    fn next_token(&self, chars: &mut Peekable<Chars>) -> Option<Token> {
+        let c = chars.peek().unwrap();
+
+        match c {
+            '$' => self.number(chars, 16),
+            _ => None,
+        }
+    }
+
+    fn number(&self, chars: &mut Peekable<Chars>, radix: u32) -> Option<Token> {
+        if radix != 10 {
+            chars.next();
+        }
+        let mut lexeme = String::new();
+        while let Some(c) = chars.peek() {
+            if c.is_digit(radix) {
+                lexeme.push(*c);
+                chars.next();
+            } else {
+                break;
+            }
+        }
+        Some(Token::Number(
+            u32::from_str_radix(lexeme.as_str(), radix).expect("invalid token"),
+        ))
     }
 }
