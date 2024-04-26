@@ -14,6 +14,12 @@ struct Cli {
     tokens: bool,
 }
 
+#[derive(Debug)]
+struct Error {
+    line: usize,
+    message: String,
+}
+
 fn main() {
     let cli = Cli::parse();
 
@@ -29,18 +35,24 @@ fn repl() {
 
         let mut input = String::new();
         match stdin().read_line(&mut input) {
-            Ok(_) => {}
+            Ok(_) => run(input),
             Err(e) => println!("Error: {e}"),
         }
-
-        run(input);
     }
 }
 
 fn run(source: String) {
     let mut scanner = Scanner::new(source);
     let tokens = scanner.scan();
-    println!("{tokens:?}");
+    if scanner.has_error {
+        println!("Error occurred");
+    } else {
+        println!("{tokens:?}");
+    }
+}
+
+fn error(e: Error) {
+    println!("Error: Line {}: {}", e.line, e.message);
 }
 
 #[derive(Clone, Debug)]
@@ -52,6 +64,7 @@ struct Scanner {
     source: String,
     line: usize,
     tokens: Vec<Token>,
+    has_error: bool,
 }
 
 impl Scanner {
@@ -60,6 +73,7 @@ impl Scanner {
             source,
             line: 1,
             tokens: Vec::new(),
+            has_error: false,
         }
     }
 
@@ -80,7 +94,13 @@ impl Scanner {
 
         match c {
             '$' => self.number(chars, 16),
-            _ => None,
+            c => {
+                if c.is_digit(10) {
+                    self.number(chars, 10)
+                } else {
+                    None
+                }
+            }
         }
     }
 
@@ -97,8 +117,16 @@ impl Scanner {
                 break;
             }
         }
-        Some(Token::Number(
-            u32::from_str_radix(lexeme.as_str(), radix).expect("invalid token"),
-        ))
+        let result = u32::from_str_radix(lexeme.as_str(), radix);
+        match result {
+            Ok(n) => Some(Token::Number(n)),
+            Err(_) => {
+                error(Error {
+                    line: self.line,
+                    message: "invalid number".to_string(),
+                });
+                None
+            }
+        }
     }
 }
