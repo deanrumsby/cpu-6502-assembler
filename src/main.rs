@@ -1,4 +1,5 @@
 use clap::Parser;
+use phf::phf_map;
 use std::{
     io::{stdin, stdout, Write},
     iter::Peekable,
@@ -59,7 +60,17 @@ fn error(e: Error) {
 enum Token {
     Number(u32),
     Identifier(String),
+    Op(Op),
 }
+
+#[derive(Clone, Debug)]
+enum Op {
+    ADC,
+}
+
+static OPS: phf::Map<&'static str, Op> = phf_map! {
+    "adc" => Op::ADC,
+};
 
 struct Scanner {
     source: String,
@@ -152,6 +163,10 @@ impl Scanner {
             } else {
                 break;
             }
+        }
+
+        if let Some(op) = OPS.get(lexeme.to_lowercase().as_str()) {
+            return Ok(Token::Op(op.clone()));
         }
 
         Ok(Token::Identifier(lexeme))
