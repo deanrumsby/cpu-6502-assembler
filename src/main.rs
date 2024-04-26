@@ -58,6 +58,7 @@ fn error(e: Error) {
 #[derive(Clone, Debug)]
 enum Token {
     Number(u32),
+    Identifier(String),
 }
 
 struct Scanner {
@@ -79,6 +80,7 @@ impl Scanner {
 
     pub fn scan(&mut self) -> Vec<Token> {
         let mut chars = self.source.chars().peekable();
+
         while let Some(_) = chars.peek() {
             match self.next_token(&mut chars) {
                 Some(res) => match res {
@@ -104,6 +106,8 @@ impl Scanner {
             c => {
                 if c.is_digit(10) {
                     Some(self.number(chars, 10))
+                } else if c.is_alphabetic() {
+                    Some(self.identifier(chars))
                 } else {
                     None
                 }
@@ -115,7 +119,9 @@ impl Scanner {
         if radix != 10 {
             chars.next();
         }
+
         let mut lexeme = String::new();
+
         while let Some(c) = chars.peek() {
             if c.is_digit(radix) {
                 lexeme.push(*c);
@@ -124,7 +130,9 @@ impl Scanner {
                 break;
             }
         }
+
         let result = u32::from_str_radix(lexeme.as_str(), radix);
+
         match result {
             Ok(n) => Ok(Token::Number(n)),
             Err(_) => Err(Error {
@@ -132,5 +140,20 @@ impl Scanner {
                 message: "invalid number".to_string(),
             }),
         }
+    }
+
+    fn identifier(&self, chars: &mut Peekable<Chars>) -> Result<Token, Error> {
+        let mut lexeme = String::new();
+
+        while let Some(c) = chars.peek() {
+            if c.is_alphanumeric() {
+                lexeme.push(*c);
+                chars.next();
+            } else {
+                break;
+            }
+        }
+
+        Ok(Token::Identifier(lexeme))
     }
 }
