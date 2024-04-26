@@ -80,23 +80,30 @@ impl Scanner {
     pub fn scan(&mut self) -> Vec<Token> {
         let mut chars = self.source.chars().peekable();
         while let Some(_) = chars.peek() {
-            if let Some(t) = self.next_token(&mut chars) {
-                self.tokens.push(t);
-            } else {
-                chars.next();
+            match self.next_token(&mut chars) {
+                Some(res) => match res {
+                    Ok(t) => self.tokens.push(t),
+                    Err(e) => {
+                        self.has_error = true;
+                        error(e);
+                    }
+                },
+                None => {
+                    chars.next();
+                }
             }
         }
         self.tokens.clone()
     }
 
-    fn next_token(&self, chars: &mut Peekable<Chars>) -> Option<Token> {
+    fn next_token(&self, chars: &mut Peekable<Chars>) -> Option<Result<Token, Error>> {
         let c = chars.peek().unwrap();
 
         match c {
-            '$' => self.number(chars, 16),
+            '$' => Some(self.number(chars, 16)),
             c => {
                 if c.is_digit(10) {
-                    self.number(chars, 10)
+                    Some(self.number(chars, 10))
                 } else {
                     None
                 }
@@ -104,7 +111,7 @@ impl Scanner {
         }
     }
 
-    fn number(&self, chars: &mut Peekable<Chars>, radix: u32) -> Option<Token> {
+    fn number(&self, chars: &mut Peekable<Chars>, radix: u32) -> Result<Token, Error> {
         if radix != 10 {
             chars.next();
         }
@@ -119,14 +126,11 @@ impl Scanner {
         }
         let result = u32::from_str_radix(lexeme.as_str(), radix);
         match result {
-            Ok(n) => Some(Token::Number(n)),
-            Err(_) => {
-                error(Error {
-                    line: self.line,
-                    message: "invalid number".to_string(),
-                });
-                None
-            }
+            Ok(n) => Ok(Token::Number(n)),
+            Err(_) => Err(Error {
+                line: self.line,
+                message: "invalid number".to_string(),
+            }),
         }
     }
 }
